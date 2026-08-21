@@ -19,6 +19,11 @@
       "types": "./src/git-types.ts",
       "default": "./src/git-types.ts"
     },
+    "./jj": {
+      "source": "./src/jj.ts",
+      "types": "./src/jj.ts",
+      "default": "./src/jj.ts"
+    },
     "./locks": {
       "source": "./src/locks.ts",
       "types": "./src/locks.ts",

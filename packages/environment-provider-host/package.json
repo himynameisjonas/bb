@@ -9,6 +9,11 @@
       "types": "./src/git.ts",
       "default": "./src/git.ts"
     },
+    "./jj": {
+      "source": "./src/jj.ts",
+      "types": "./src/jj.ts",
+      "default": "./src/jj.ts"
+    },
     "./locks": {
       "source": "./src/locks.ts",
       "types": "./src/locks.ts",

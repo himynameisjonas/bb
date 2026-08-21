@@ -18,14 +18,8 @@ import {
 const execFileAsync = promisify(execFile);
 const DEFAULT_BUFFER_BYTES = 16 * 1024 * 1024;
 
-export class WorkspaceError extends Error {
-  readonly code: string;
-  constructor(code: string, message: string, options?: { cause?: unknown }) {
-    super(message, options);
-    this.code = code;
-    this.name = "WorkspaceError";
-  }
-}
+import { WorkspaceError } from "bb-environment-provider-host/git";
+export { WorkspaceError };
 
 export interface GitProcessOptions {
   shellPath?: string;

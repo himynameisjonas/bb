@@ -98,4 +98,36 @@ describe("formatWorkspaceCheckoutDisplay", () => {
       title: "Unknown checkout: HEAD is missing",
     });
   });
+
+  it("shows the jj bookmark for a colocated Jujutsu checkout", () => {
+    expect(
+      formatWorkspaceCheckoutDisplay({
+        checkout: {
+          kind: "detached",
+          headSha: "abcdef1234567890",
+          jj: { bookmark: "bb/thread" },
+        },
+      }),
+    ).toMatchObject({
+      copyValue: "bb/thread",
+      label: "bb/thread",
+      rowLabel: "Bookmark",
+    });
+  });
+
+  it("shows a short jj commit id when no bookmark points at HEAD", () => {
+    expect(
+      formatWorkspaceCheckoutDisplay({
+        checkout: {
+          kind: "detached",
+          headSha: "abcdef1234567890",
+          jj: { bookmark: null },
+        },
+      }),
+    ).toMatchObject({
+      copyValue: "abcdef1234567890",
+      label: "jj abcdef1",
+      rowLabel: "Bookmark",
+    });
+  });
 });

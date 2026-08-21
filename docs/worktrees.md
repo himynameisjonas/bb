@@ -172,6 +172,39 @@ Contract:
 A server restart does not rerun a hook that already started. An unreachable
 daemon leaves cleanup pending for retry.
 
+## Jujutsu (colocated) repositories
+
+bb supports [Jujutsu](https://jj-vcs.github.io/jj/) repositories that are
+colocated with git (`jj git init --colocate` or `jj git clone --colocate`,
+so a real `.git` sits beside `.jj`). jj keeps that `.git` in sync — HEAD is
+pinned detached at the working-copy parent and bookmarks export as git
+branches — which is what bb reads.
+
+What works:
+
+- Change status and diffs. jj's working-copy changes appear as uncommitted
+  changes.
+- Checkout display shows the bookmark pointing at the current commit (or a
+  short commit id when no bookmark points there) instead of "detached".
+- Managed worktrees. bb still uses `git worktree add` under the hood; the
+  `bb/...` branch a thread commits to imports into jj as a bookmark of the
+  same name, so you can inspect and merge it with jj as usual.
+
+What's different:
+
+- The commit action is disabled in the jj main workspace: a git commit there
+  would leave the previous working-copy change behind as a stray head in
+  `jj log` without moving any bookmark. Use jj to describe or commit instead.
+  Commits in bb-managed worktrees work normally.
+- Branch switching from bb is blocked in the jj main workspace, as jj manages
+  the checkout.
+
+Not supported:
+
+- Pure jj repositories without a colocated `.git`.
+- jj secondary workspaces (`jj workspace add`) — they contain no `.git`, so
+  bb treats them as non-git directories.
+
 ## If something isn't working
 
 A few quick checks:

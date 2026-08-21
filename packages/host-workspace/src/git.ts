@@ -313,3 +313,5 @@ export async function readGitBlob(
     );
   }
 }
+
+export { detectJjColocatedWorkspace } from "bb-environment-provider-host/workspace-git";

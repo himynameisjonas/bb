@@ -488,8 +488,17 @@ export function parseOriginHeadBranchName(output: string): string | undefined {
 export type GitCheckoutState =
   | { kind: "branch"; branchName: string; headSha: string }
   | { kind: "unborn"; branchName: string }
-  | { kind: "detached"; headSha: string }
+  | { kind: "detached"; headSha: string; jj?: { bookmark: string | null } }
   | { kind: "unknown"; reason: string };
+
+export async function detectJjColocatedWorkspace(cwd: string): Promise<boolean> {
+  try {
+    const stats = await fs.lstat(path.join(cwd, ".jj"));
+    return stats.isDirectory();
+  } catch {
+    return false;
+  }
+}
 
 export type GitOperationState =
   | { kind: "none" }
@@ -672,6 +681,26 @@ export function createGitQueries(run: GitQueryRunner) {
     return trimOutput(result.stdout) || null;
   }
 
+  async function listBranchesPointingAtHead(
+    cwd: string,
+    options: GitTimeoutOptions,
+  ): Promise<string[]> {
+    const result = await run(
+      [
+        "for-each-ref",
+        "--points-at",
+        "HEAD",
+        "--format=%(refname:short)",
+        "refs/heads",
+      ],
+      { cwd, ...options, allowFailure: true },
+    );
+    if (result.exitCode !== 0) {
+      return [];
+    }
+    return trimOutput(result.stdout).split("\n").filter(Boolean);
+  }
+
   async function getCheckoutRef(
     cwd: string,
     options: GitTimeoutOptions = {},
@@ -703,6 +732,14 @@ export function createGitQueries(run: GitQueryRunner) {
         : { kind: "branch", branchName, headSha };
     }
     if (headSha !== null) {
+      if (await detectJjColocatedWorkspace(cwd)) {
+        const branches = await listBranchesPointingAtHead(cwd, options);
+        return {
+          kind: "detached",
+          headSha,
+          jj: { bookmark: branches[0] ?? null },
+        };
+      }
       return { kind: "detached", headSha };
     }
     return {

@@ -8,6 +8,7 @@ import {
   getCheckoutRef,
   runGit,
 } from "bb-environment-provider-host/workspace-git";
+import { Workspace } from "../src/host-workspace.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -117,5 +118,44 @@ describe.skipIf(!jjAvailable)("colocated jj workspaces", () => {
     const checkout = await getCheckoutRef(worktreePath);
     expect(checkout).toMatchObject({ kind: "branch", branchName: "bb/test" });
     expect(checkout).not.toHaveProperty("jj");
+  });
+  it("refuses commit in the jj main workspace with a typed jj_workspace error", async () => {
+    const repoPath = await initColocatedJjRepo();
+    await fs.writeFile(path.join(repoPath, "new.txt"), "new\n", "utf8");
+
+    const workspace = new Workspace({ path: repoPath, isGitRepo: true, isWorktree: false, gitCommonDir: null });
+    await expect(
+      workspace.commit({ message: "test", noVerify: true }),
+    ).rejects.toMatchObject({
+      name: "WorkspaceError",
+      code: "jj_workspace",
+    });
+  });
+
+  it("commits normally in a managed worktree of a jj repo", async () => {
+    const repoPath = await initColocatedJjRepo();
+    await runJj(["bookmark", "create", "main", "-r", "@-"], repoPath);
+    const worktreeParent = await makeTempDir("bb-jj-worktree-parent-");
+    const worktreePath = path.join(worktreeParent, "feature");
+    await runGit(["worktree", "add", "-B", "bb/test", worktreePath, "main"], {
+      cwd: repoPath,
+    });
+    await runGit(["config", "user.name", "BB Tests"], { cwd: worktreePath });
+    await runGit(["config", "user.email", "bb@example.com"], {
+      cwd: worktreePath,
+    });
+    await fs.writeFile(path.join(worktreePath, "work.txt"), "work\n", "utf8");
+
+    const workspace = new Workspace({ path: worktreePath, isGitRepo: true, isWorktree: true, gitCommonDir: null });
+    const result = await workspace.commit({
+      message: "worktree commit",
+      noVerify: true,
+    });
+    expect(result.commitSubject).toBe("worktree commit");
+
+    // The commit imports into jj as the bb/test bookmark, without conflicts
+    // or duplicate heads in the source workspace.
+    const bookmarks = await runJj(["bookmark", "list", "--all"], repoPath);
+    expect(bookmarks).toContain("bb/test");
   });
 });

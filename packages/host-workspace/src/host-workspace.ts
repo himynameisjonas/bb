@@ -12,6 +12,7 @@ import {
   WORKSPACE_STATUS_GIT_TIMEOUT_MS,
 } from "bb-environment-provider-host/workspace-git";
 import {
+  detectJjColocatedWorkspace,
   readSharedGitRefsSnapshot,
   type SharedGitRefsSnapshot,
   revParse,
@@ -145,6 +146,12 @@ export class Workspace implements HostWorkspace {
 
   async commit(options: CommitOptions): Promise<CommitResult> {
     await ensureGitRepo(this.path, this.gitProcessOptions);
+    if (await detectJjColocatedWorkspace(this.path)) {
+      throw new WorkspaceError(
+        "jj_workspace",
+        "This workspace is managed by jj; use jj to describe or commit the change",
+      );
+    }
 
     return withCheckoutMutationLock(
       this.path,

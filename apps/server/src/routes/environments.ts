@@ -78,6 +78,19 @@ async function mapNoChangesTo409<TResult>(
   }
 }
 
+async function mapJjWorkspaceTo409<TResult>(
+  run: () => Promise<TResult>,
+): Promise<TResult> {
+  try {
+    return await run();
+  } catch (error) {
+    if (error instanceof ApiError && error.body.code === "jj_workspace") {
+      throw new ApiError(409, "jj_workspace", error.body.message);
+    }
+    throw error;
+  }
+}
+
 export function registerEnvironmentRoutes(
   app: Hono,
   deps: AppDeps,
@@ -271,9 +284,8 @@ export function registerEnvironmentRoutes(
     });
     const commitMessage = aiMessage ?? COMMIT_FALLBACK_MESSAGE;
 
-    const result = await mapNoChangesTo409(
-      "No uncommitted changes to commit",
-      () =>
+    const result = await mapJjWorkspaceTo409(() =>
+      mapNoChangesTo409("No uncommitted changes to commit", () =>
         runLiveCommandAndWait(deps, {
           hostId: target.hostId,
           timeoutMs: COMMAND_TIMEOUT_MS,
@@ -284,6 +296,7 @@ export function registerEnvironmentRoutes(
             message: commitMessage,
           },
         }),
+      ),
     );
     await refreshGitState(plugins, target.environmentId);
     return context.json({

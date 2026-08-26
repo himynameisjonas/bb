@@ -8,12 +8,14 @@ import { toWatchErrorMessage } from "./watch-error.js";
 
 const WORKSPACE_ROOT_ALWAYS_IGNORED_GLOBS = [
   "*/**/.git/**",
+  "*/**/.jj/**",
   "**/node_modules/**",
   "**/.cache/**",
   "**/__pycache__/**",
 ];
 const NESTED_REPOSITORY_SEARCH_SKIPPED_NAMES = new Set([
   ".git",
+  ".jj",
   "node_modules",
   ".cache",
   "__pycache__",
@@ -153,8 +155,8 @@ async function mapWithConcurrency<T, R>(
 
 function createWorkspaceRootBaseIgnores(gitRoot: boolean): string[] {
   return gitRoot
-    ? [".git", ...WORKSPACE_ROOT_ALWAYS_IGNORED_GLOBS]
-    : [...WORKSPACE_ROOT_ALWAYS_IGNORED_GLOBS];
+    ? [".git", ".jj", ...WORKSPACE_ROOT_ALWAYS_IGNORED_GLOBS]
+    : [".jj", ...WORKSPACE_ROOT_ALWAYS_IGNORED_GLOBS];
 }
 
 export async function resolveWorkspaceRootIgnores(args: {

@@ -13,6 +13,11 @@ import type {
   StatusOptions,
 } from "./workspace.js";
 import { Workspace } from "./workspace.js";
+import { JjWorkspace } from "./jj-workspace.js";
+import {
+  readJjWorkspaceName,
+  resolveJjWorkspaceLayout,
+} from "bb-environment-provider-host/jj";
 import type {
   GitHostCliOptions,
   GitHostPullRequestLookup,
@@ -95,6 +100,7 @@ class ProvisionedHostWorkspace implements HostWorkspace {
     isGitRepo: boolean;
     isWorktree: boolean;
     shellPath?: string;
+    workspace?: Workspace;
   }) {
     this.path = opts.path;
     this.isGitRepo = opts.isGitRepo;
@@ -102,7 +108,8 @@ class ProvisionedHostWorkspace implements HostWorkspace {
     this.gitProcessOptions = {
       ...(opts.shellPath !== undefined ? { shellPath: opts.shellPath } : {}),
     };
-    this.ws = new Workspace(opts.path, this.gitProcessOptions);
+    this.ws =
+      opts.workspace ?? new Workspace(opts.path, this.gitProcessOptions);
   }
 
   async getCurrentBranch(): Promise<string | null> {
@@ -177,6 +184,30 @@ class ProvisionedHostWorkspace implements HostWorkspace {
   }
 }
 
+/**
+ * Builds the workspace implementation for a path: a {@link JjWorkspace} when
+ * the path is a `jj workspace add` workspace with a shadow git checkout, a
+ * plain {@link Workspace} otherwise.
+ *
+ * The jj bookmark carrying the workspace's committed work is named after the
+ * workspace itself, so it is read back from jj rather than remembered. A
+ * daemon restart therefore resolves the same bookmark from the path alone.
+ */
+async function createWorkspaceForPath(
+  wsPath: string,
+  options: GitProcessOptions,
+): Promise<Workspace> {
+  const layout = await resolveJjWorkspaceLayout(wsPath);
+  if (layout?.kind !== "secondary") {
+    return new Workspace(wsPath, options);
+  }
+  const bookmark = await readJjWorkspaceName(layout.sourcePath, wsPath, options);
+  if (!bookmark) {
+    return new Workspace(wsPath, options);
+  }
+  return new JjWorkspace({ path: wsPath, layout, bookmark, options });
+}
+
 export function provisionWorkspace(
   opts: ProvisionWorkspaceArgs,
 ): Promise<HostWorkspace> {
@@ -207,5 +238,8 @@ async function provisionUnmanaged(
     isGitRepo,
     isWorktree,
     shellPath: opts.shellPath,
+    workspace: isGitRepo
+      ? await createWorkspaceForPath(opts.path, gitProcessOptions)
+      : undefined,
   });
 }

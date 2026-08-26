@@ -1,4 +1,10 @@
-export const HOST_DAEMON_PROTOCOL_VERSION = 256 as const;
+// Version 257 supports Jujutsu sources. The `detached` checkout variant can
+// carry a `jj` object naming the bookmark at HEAD, `workspace.commit` refuses
+// to run in a jj main workspace with a typed `jj_workspace` error the server
+// maps to 409, and the daemon commits a colocated `jj workspace add`
+// workspace with jj. An older daemon reports no jj checkouts and would commit
+// such a workspace with git, so the bump forces enrolled machines to update.
+export const HOST_DAEMON_PROTOCOL_VERSION = 257 as const;
 
 export const HOST_DAEMON_CONNECT_NEXT_PROTOCOL_VERSION = 247 as const;
 

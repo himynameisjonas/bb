@@ -235,6 +235,45 @@ export async function syncShadowGitCheckout(
 }
 
 /**
+ * Name jj knows a workspace directory by, or null when the repository has no
+ * workspace rooted there.
+ *
+ * Workspaces are matched on the root path jj records rather than on a name bb
+ * remembers, so this also resolves after a restart, and for workspaces bb did
+ * not create.
+ */
+export async function readJjWorkspaceName(
+  sourcePath: string,
+  workspacePath: string,
+  options: GitProcessOptions = {},
+): Promise<string | null> {
+  const listed = await runJj(
+    ["workspace", "list", "-T", 'name ++ "\\t" ++ if(root, root, "") ++ "\\n"'],
+    { cwd: sourcePath, allowFailure: true, ...options },
+  );
+  if (listed.exitCode !== 0) {
+    return null;
+  }
+
+  const target = await realpathOrResolved(workspacePath);
+  for (const line of listed.stdout.split("\n")) {
+    const [name = "", root = ""] = line.split("\t");
+    if (name && root && (await realpathOrResolved(root)) === target) {
+      return name;
+    }
+  }
+  return null;
+}
+
+async function realpathOrResolved(target: string): Promise<string> {
+  try {
+    return await fs.realpath(target);
+  } catch {
+    return path.resolve(target);
+  }
+}
+
+/**
  * Registers an existing jj workspace as a git worktree of its source
  * repository, so bb reads it with the same git commands it uses everywhere
  * else.

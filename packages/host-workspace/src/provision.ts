@@ -8,6 +8,11 @@ import {
 } from "./host-workspace.js";
 import { inspectGitRepository, type SharedGitRefsSnapshot } from "./git.js";
 import { WorkspaceError } from "bb-environment-provider-host/workspace-git";
+import {
+  readJjWorkspaceName,
+  resolveJjWorkspaceLayout,
+} from "bb-environment-provider-host/jj";
+import { JjWorkspace } from "./jj-workspace.js";
 
 type ProvisionProgressCallback = (entry: ProvisioningTranscriptEntry) => void;
 
@@ -70,6 +75,26 @@ async function provisionUnmanaged(
   const { isGitRepo, isWorktree } = await inspectGitRepository(opts.path, {
     ...(opts.shellPath !== undefined ? { shellPath: opts.shellPath } : {}),
   });
+
+  if (isGitRepo) {
+    const layout = await resolveJjWorkspaceLayout(opts.path);
+    if (layout?.kind === "secondary") {
+      const bookmark = await readJjWorkspaceName(
+        layout.sourcePath,
+        opts.path,
+        opts.shellPath === undefined ? {} : { shellPath: opts.shellPath },
+      );
+      if (bookmark !== null) {
+        return new JjWorkspace({
+          path: opts.path,
+          isWorktree,
+          layout,
+          bookmark,
+          ...(opts.shellPath !== undefined ? { shellPath: opts.shellPath } : {}),
+        });
+      }
+    }
+  }
 
   return new Workspace({
     path: opts.path,

@@ -39,7 +39,7 @@ import {
   copyWorktreeIncludeFiles,
   WORKTREE_INCLUDE_FILE_NAME,
   type CopyWorktreeIncludeFilesResult,
-} from "./worktree-include.js";
+} from "bb-environment-provider-host/worktree-include";
 import type { ResolvedWorktreeBaseBranch } from "./base-branch.js";
 
 export type BranchMode = "reset" | "reuse-existing";

@@ -317,6 +317,7 @@ describe("builtin plugin reconciliation", () => {
       ["side-chat", "SideChat"],
       ["workflows", "Workflow"],
       ["environment-git-worktree", "FolderGit"],
+      ["environment-jj-workspace", "FolderSync"],
     ]);
 
     expect(BUILTIN_PLUGINS).toHaveLength(expectedIcons.size);

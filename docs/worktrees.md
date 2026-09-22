@@ -178,34 +178,60 @@ records resolve never-started operations and prevent delayed execution.
 
 bb supports [Jujutsu](https://jj-vcs.github.io/jj/) repositories that are
 colocated with git (`jj git init --colocate` or `jj git clone --colocate`,
-so a real `.git` sits beside `.jj`). jj keeps that `.git` in sync — HEAD is
+so a real `.git` sits beside `.jj`). jj keeps that `.git` in sync: HEAD is
 pinned detached at the working-copy parent and bookmarks export as git
-branches — which is what bb reads.
+branches, which is what bb reads.
 
-What works:
+What works in the main workspace:
 
 - Change status and diffs. jj's working-copy changes appear as uncommitted
   changes.
 - Checkout display shows the bookmark pointing at the current commit (or a
   short commit id when no bookmark points there) instead of "detached".
-- Managed worktrees. bb still uses `git worktree add` under the hood; the
-  `bb/...` branch a thread commits to imports into jj as a bookmark of the
-  same name, so you can inspect and merge it with jj as usual.
 
-What's different:
+What's different there:
 
-- The commit action is disabled in the jj main workspace: a git commit there
-  would leave the previous working-copy change behind as a stray head in
-  `jj log` without moving any bookmark. Use jj to describe or commit instead.
-  Commits in bb-managed worktrees work normally.
-- Branch switching from bb is blocked in the jj main workspace, as jj manages
-  the checkout.
+- The commit action is disabled: a git commit would leave the previous
+  working-copy change behind as a stray head in `jj log` without moving any
+  bookmark. Use jj to describe or commit instead.
+- Branch switching from bb is blocked, as jj manages the checkout.
+
+### Threads get a real jj workspace
+
+The bundled **Workspace** environment provider (`jj-workspace`) creates the
+managed checkout with `jj workspace add` instead of `git worktree add`. It is
+offered in the environment picker only on machines where the project checkout
+is a colocated jj repository and `jj` is installed. The thread's work is
+jj-native: it shows up as that workspace's `@` in `jj log`, `jj op log` can
+undo it, and `jj workspace list` in your repository shows where it lives.
+
+- A remote base such as `origin/main` is fetched with `jj git fetch` first,
+  so the workspace starts from the latest remote state.
+- The workspace is named after the thread's branch (`bb/...`), and a bookmark
+  of that name is set on the base so committed work has somewhere to land.
+- Committing from bb runs `jj commit`, moves that bookmark and exports it to
+  git, so the branch is visible to `git log` and to bb's diffs.
+- Commits an agent makes by running jj itself are picked up automatically.
+- Local files listed in `.worktreeinclude` are copied in, the same way the
+  Worktree provider does it.
+- Archiving the thread runs `jj workspace forget` and deletes the directory.
+
+A jj workspace has no `.git` of its own, so the provider also registers it as
+a git worktree of your repository and keeps that checkout pinned at `@-`.
+That is what lets status, diffs and file reads keep working; jj remains the
+only thing writing to the working copy. One consequence: a plain `git commit`
+inside the workspace (by you or an agent) doesn't stick. jj never sees it, and
+the next time bb reads the workspace the changes show up as uncommitted
+again. Nothing is lost, but the commit is. Use jj, or bb's own commit action.
+
+The **Worktree** provider still works for jj repositories too. The `bb/...`
+git branch a thread commits to imports into jj as a bookmark of the same
+name, so you can inspect and merge it with jj as usual.
 
 Not supported:
 
-- Pure jj repositories without a colocated `.git`.
-- jj secondary workspaces (`jj workspace add`) — they contain no `.git`, so
-  bb treats them as non-git directories.
+- Pure jj repositories without a colocated `.git`. The colocated git store is
+  what bb reads.
 
 ## If something isn't working
 

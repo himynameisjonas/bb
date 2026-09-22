@@ -68,6 +68,11 @@ export const BUILTIN_PLUGINS = [
     defaultEnabled: true,
   },
   {
+    name: "environment-jj-workspace",
+    pluginId: "environment-jj-workspace",
+    defaultEnabled: true,
+  },
+  {
     name: "environment-personal-workspace",
     pluginId: "environment-personal-workspace",
     defaultEnabled: true,

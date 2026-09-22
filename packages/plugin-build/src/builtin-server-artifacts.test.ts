@@ -72,6 +72,7 @@ describe("builtin server artifacts", () => {
   it.each([
     { pluginDir: "environment-project-checkout" },
     { pluginDir: "environment-git-worktree" },
+    { pluginDir: "environment-jj-workspace" },
     { pluginDir: "environment-personal-workspace" },
     { pluginDir: "environment-modal-sandbox" },
   ])(

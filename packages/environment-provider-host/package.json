@@ -4,6 +4,11 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./checkout-paths": {
+      "source": "./src/checkout-paths.ts",
+      "types": "./src/checkout-paths.ts",
+      "default": "./src/checkout-paths.ts"
+    },
     "./git": {
       "source": "./src/git.ts",
       "types": "./src/git.ts",
@@ -38,6 +43,11 @@
       "source": "./src/transcript.ts",
       "types": "./src/transcript.ts",
       "default": "./src/transcript.ts"
+    },
+    "./worktree-include": {
+      "source": "./src/worktree-include.ts",
+      "types": "./src/worktree-include.ts",
+      "default": "./src/worktree-include.ts"
     }
   },
   "scripts": {

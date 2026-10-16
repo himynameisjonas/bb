@@ -5,7 +5,6 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, it } from "vitest";
 import {
-  attachShadowGitCheckout,
   runJj,
 } from "bb-environment-provider-host/jj";
 import { runGit } from "bb-environment-provider-host/workspace-git";
@@ -48,10 +47,9 @@ async function addShadowedWorkspace(
 ): Promise<string> {
   const parent = await makeTempDir("bb-jj-provision-target-");
   const workspacePath = path.join(parent, "repo");
-  await runJj(["workspace", "add", "--name", name, workspacePath, "-r", "main"], {
+  await runJj(["workspace", "add", "--colocate", "--name", name, workspacePath, "-r", "main"], {
     cwd: sourcePath,
   });
-  await attachShadowGitCheckout({ sourcePath, workspacePath });
   return workspacePath;
 }
 

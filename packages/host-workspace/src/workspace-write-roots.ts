@@ -52,7 +52,7 @@ export async function resolveAdditionalWorkspaceWriteRoots(
   ]);
   // A jj workspace keeps its operation log and repository state in the source
   // repository, outside the workspace, so an agent running jj here writes there
-  // as well as into the shadow git checkout's own directories.
+  // as well as into its git worktree's own directories.
   const jjLayout = await resolveJjWorkspaceLayout(resolvedWorkspacePath);
   const jjRoots =
     jjLayout?.kind === "secondary" ? [jjLayout.repoPath] : ([] as string[]);

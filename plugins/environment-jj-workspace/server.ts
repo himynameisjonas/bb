@@ -124,6 +124,12 @@ export default async function jjWorkspacePlugin(bb: BbPluginApi): Promise<void> 
             message: "jj is not installed on this machine",
           };
         }
+        if (!inspected.jjColocatesWorkspaces) {
+          return {
+            status: "setup-required",
+            message: "Upgrade jj to 0.46 or newer on this machine",
+          };
+        }
         if (!inspected.colocatedJjSource) {
           return {
             status: "unavailable",

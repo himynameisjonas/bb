@@ -107,6 +107,7 @@ describe.skipIf(!jjAvailable)("jj workspace host entry", () => {
     const harness = createHarness(dataDir);
     expect(await harness.experimental_call("inspect", { sourcePath })).toEqual({
       jjAvailable: true,
+      jjColocatesWorkspaces: true,
       colocatedJjSource: true,
     });
     expect(

@@ -199,7 +199,7 @@ What's different there:
 The bundled **Workspace** environment provider (`jj-workspace`) creates the
 managed checkout with `jj workspace add` instead of `git worktree add`. It is
 offered in the environment picker only on machines where the project checkout
-is a colocated jj repository and `jj` is installed. The thread's work is
+is a colocated jj repository and jj 0.46 or newer is installed. The thread's work is
 jj-native: it shows up as that workspace's `@` in `jj log`, `jj op log` can
 undo it, and `jj workspace list` in your repository shows where it lives.
 
@@ -214,13 +214,11 @@ undo it, and `jj workspace list` in your repository shows where it lives.
   Worktree provider does it.
 - Archiving the thread runs `jj workspace forget` and deletes the directory.
 
-A jj workspace has no `.git` of its own, so the provider also registers it as
-a git worktree of your repository and keeps that checkout pinned at `@-`.
-That is what lets status, diffs and file reads keep working; jj remains the
-only thing writing to the working copy. One consequence: a plain `git commit`
-inside the workspace (by you or an agent) doesn't stick. jj never sees it, and
-the next time bb reads the workspace the changes show up as uncommitted
-again. Nothing is lost, but the commit is. Use jj, or bb's own commit action.
+The provider runs `jj workspace add --colocate`, so the workspace is also a
+git worktree of your repository, and jj keeps its git HEAD at `@-`. That is
+what lets status, diffs and file reads work with git. It needs jj 0.46 or
+newer; with an older jj the picker asks you to upgrade. Commit with jj, or
+with bb's own commit action, so the bookmark moves with the work.
 
 The **Worktree** provider still works for jj repositories too. The `bb/...`
 git branch a thread commits to imports into jj as a bookmark of the same

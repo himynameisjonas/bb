@@ -34,8 +34,13 @@ const PROJECT: Project = {
 };
 
 async function setup(
-  inspect: { jjAvailable: boolean; colocatedJjSource: boolean } = {
+  inspect: {
+    jjAvailable: boolean;
+    jjColocatesWorkspaces: boolean;
+    colocatedJjSource: boolean;
+  } = {
     jjAvailable: true,
+    jjColocatesWorkspaces: true,
     colocatedJjSource: true,
   },
 ) {
@@ -100,14 +105,34 @@ describe("jj workspace provider", () => {
       input: { sourcePath: SOURCE_PATH },
     });
 
-    const plainGit = await setup({ jjAvailable: true, colocatedJjSource: false });
+    const plainGit = await setup({
+      jjAvailable: true,
+      jjColocatesWorkspaces: true,
+      colocatedJjSource: false,
+    });
     expect(
       await plainGit.provider.availability?.(plainGit.availabilityContext),
     ).toMatchObject({ status: "unavailable" });
 
-    const noJj = await setup({ jjAvailable: false, colocatedJjSource: false });
+    const noJj = await setup({
+      jjAvailable: false,
+      jjColocatesWorkspaces: false,
+      colocatedJjSource: false,
+    });
     expect(await noJj.provider.availability?.(noJj.availabilityContext)).toEqual(
       { status: "unavailable", message: "jj is not installed on this machine" },
+    );
+
+    const oldJj = await setup({
+      jjAvailable: true,
+      jjColocatesWorkspaces: false,
+      colocatedJjSource: true,
+    });
+    expect(await oldJj.provider.availability?.(oldJj.availabilityContext)).toEqual(
+      {
+        status: "setup-required",
+        message: "Upgrade jj to 0.46 or newer on this machine",
+      },
     );
 
     const noCheckout = await setup();

@@ -6,7 +6,6 @@ import {
 import {
   readJjWorkingCopyCommits,
   runJj,
-  syncShadowGitCheckout,
   withJjRepoLock,
   type JjWorkspaceLayout,
 } from "bb-environment-provider-host/jj";
@@ -14,7 +13,6 @@ import {
   Workspace,
   type CommitOptions,
   type CommitResult,
-  type LocalStateSnapshot,
 } from "./host-workspace.js";
 
 export class JjWorkspace extends Workspace {
@@ -41,20 +39,6 @@ export class JjWorkspace extends Workspace {
       args.shellPath === undefined ? {} : { shellPath: args.shellPath };
   }
 
-  private async sync(): Promise<void> {
-    await syncShadowGitCheckout(this.path, this.jjProcessOptions);
-  }
-
-  override async getLocalStateSnapshot(): Promise<LocalStateSnapshot> {
-    await this.sync();
-    return super.getLocalStateSnapshot();
-  }
-
-  override async getHeadSha(): Promise<string | null> {
-    await this.sync();
-    return super.getHeadSha();
-  }
-
   override async commit(options: CommitOptions): Promise<CommitResult> {
     return withJjRepoLock(this.layout, async () => {
       const before = await readJjWorkingCopyCommits(
@@ -78,7 +62,6 @@ export class JjWorkspace extends Workspace {
         ...this.jjProcessOptions,
       });
       await this.exportBookmark(after.parent);
-      await this.sync();
 
       if (after.parent === before.parent) {
         throw new WorkspaceError(

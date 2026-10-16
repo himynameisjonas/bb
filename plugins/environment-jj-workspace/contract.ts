@@ -18,6 +18,7 @@ export const jjWorkspaceHostContract = defineRpcContract({
     output: z
       .object({
         jjAvailable: z.boolean(),
+        jjColocatesWorkspaces: z.boolean(),
         colocatedJjSource: z.boolean(),
       })
       .strict(),

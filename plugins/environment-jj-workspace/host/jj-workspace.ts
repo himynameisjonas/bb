@@ -9,7 +9,6 @@ import {
   WorkspaceError,
 } from "bb-environment-provider-host/git";
 import {
-  attachShadowGitCheckout,
   detectColocatedJjSource,
   readJjWorkspaceName,
   resolveJjWorkspaceLayout,
@@ -264,8 +263,8 @@ async function removeCreateTarget(args: CreateJjWorkspaceArgs): Promise<void> {
  *
  * The workspace is named after the branch bb would otherwise have created,
  * and a bookmark of that name is set on the base so committed work has
- * somewhere to land. `attachShadowGitCheckout` then registers the workspace
- * as a git worktree, which is what lets every git-based read keep working.
+ * somewhere to land. `--colocate` makes the workspace a linked git worktree
+ * whose HEAD jj keeps at `@-`, which is what lets git-based reads work.
  */
 export async function createJjWorkspace(
   args: CreateJjWorkspaceArgs,
@@ -363,6 +362,7 @@ export async function createJjWorkspace(
           [
             "workspace",
             "add",
+            "--colocate",
             "--name",
             args.workspaceName,
             args.targetPath,
@@ -383,11 +383,6 @@ export async function createJjWorkspace(
       );
     }
     await runJj(["git", "export"], jjOptions);
-    await attachShadowGitCheckout({
-      sourcePath: args.sourcePath,
-      workspacePath: args.targetPath,
-      ...signalOptions(args.signal),
-    });
     emitStep({
       onProgress: args.onProgress,
       key: "jj-workspace-completed",
@@ -432,7 +427,7 @@ async function removeDirectoryIfEmpty(pathToRemove: string): Promise<void> {
 }
 
 /**
- * Forgets the jj workspace, unregisters its shadow git checkout and deletes
+ * Forgets the jj workspace, unregisters its git worktree and deletes
  * the directory. The workspace name is read before the directory goes,
  * because jj resolves a workspace's root only while it exists.
  */

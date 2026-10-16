@@ -674,7 +674,7 @@ jobs:
         if: matrix.shard == 'packages'
         run: |
           mkdir -p "$HOME/.local/bin"
-          curl -fsSL https://github.com/jj-vcs/jj/releases/download/v0.44.0/jj-v0.44.0-x86_64-unknown-linux-musl.tar.gz \
+          curl -fsSL https://github.com/jj-vcs/jj/releases/download/v0.46.0/jj-v0.46.0-x86_64-unknown-linux-musl.tar.gz \
             | tar -xz -C "$HOME/.local/bin" ./jj
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 

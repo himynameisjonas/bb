@@ -60,8 +60,17 @@ export function createJjWorkspaceHostEntry() {
           cwd: input.sourcePath,
           allowFailure: true,
         });
+        const workspaceAddHelp =
+          version.exitCode === 0
+            ? await runJj(["workspace", "add", "--help"], {
+                cwd: input.sourcePath,
+                allowFailure: true,
+              })
+            : null;
         return {
           jjAvailable: version.exitCode === 0,
+          jjColocatesWorkspaces:
+            workspaceAddHelp?.stdout.includes("--colocate") ?? false,
           colocatedJjSource: await detectColocatedJjSource(input.sourcePath),
         };
       },

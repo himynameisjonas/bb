@@ -7,7 +7,6 @@ import { afterEach, describe, expect, it } from "vitest";
 import { runGit } from "bb-environment-provider-host/workspace-git";
 import { JjWorkspace } from "../src/jj-workspace.js";
 import {
-  attachShadowGitCheckout,
   resolveJjWorkspaceLayout,
   runJj,
   type JjWorkspaceLayout,
@@ -50,10 +49,9 @@ async function addWorkspace(
   const parent = await makeTempDir("bb-jj-workspaces-");
   const workspacePath = path.join(parent, "thread");
   await runJj(
-    ["workspace", "add", "--name", bookmark, workspacePath, "-r", "main"],
+    ["workspace", "add", "--colocate", "--name", bookmark, workspacePath, "-r", "main"],
     { cwd: sourcePath },
   );
-  await attachShadowGitCheckout({ sourcePath, workspacePath });
   const layout = (await resolveJjWorkspaceLayout(
     workspacePath,
   )) as JjWorkspaceLayout;

@@ -1,10 +1,9 @@
 import { execFile, type ExecFileException } from "node:child_process";
 import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { experimental_sanitizeInheritedChildProcessEnv as sanitizeInheritedChildProcessEnv } from "@get-bb/plugin-sdk/host";
-import { WorkspaceError, runGit, type GitProcessOptions } from "./workspace-git.js";
+import { WorkspaceError, type GitProcessOptions } from "./workspace-git.js";
 import {
   withProcessLocalQueuedLocks,
   type ProcessLocalQueuedLockWork,
@@ -203,38 +202,6 @@ export async function readJjWorkingCopyCommits(
 }
 
 /**
- * Points the workspace's shadow git checkout at jj's `@-` and rebuilds its
- * index from that commit.
- *
- * bb provisions a jj workspace with a git worktree registration beside it (see
- * `attachShadowGitCheckout`) so every git-based read keeps working. jj knows
- * nothing about that registration, so whenever jj moves `@-` — bb's own commit,
- * or an agent running jj directly — git's HEAD and index have to be pulled
- * along before anything reads them. `reset` moves both without touching a file
- * in the working tree, so jj stays the only writer of the checkout itself.
- */
-export async function syncShadowGitCheckout(
-  workspacePath: string,
-  options: GitProcessOptions & { timeoutMs?: number; signal?: AbortSignal } = {},
-): Promise<void> {
-  const { parent } = await readJjWorkingCopyCommits(workspacePath, options);
-  const head = await runGit(["rev-parse", "HEAD"], {
-    cwd: workspacePath,
-    allowFailure: true,
-    timeoutMs: options.timeoutMs,
-    signal: options.signal,
-  });
-  if (head.exitCode === 0 && head.stdout.trim() === parent) {
-    return;
-  }
-  await runGit(["reset", "-q", parent], {
-    cwd: workspacePath,
-    timeoutMs: options.timeoutMs,
-    signal: options.signal,
-  });
-}
-
-/**
  * Name jj knows a workspace directory by, or null when the repository has no
  * workspace rooted there.
  *
@@ -274,65 +241,6 @@ async function realpathOrResolved(target: string): Promise<string> {
 }
 
 /**
- * Registers an existing jj workspace as a git worktree of its source
- * repository, so bb reads it with the same git commands it uses everywhere
- * else.
- *
- * `git worktree add` insists on an empty directory and jj has already filled
- * this one, so the registration is created next to it and then moved in:
- * `worktree repair` rewrites both ends of the pointer pair afterwards. The
- * checkout ends up detached at `@-`, which is the same shape jj leaves behind
- * in a colocated main workspace.
- *
- * jj 0.46 and newer colocate added workspaces themselves, so the workspace
- * already has a `.git` and jj keeps its HEAD at `@-`. Then there is nothing
- * to attach.
- */
-export async function attachShadowGitCheckout(
-  args: GitProcessOptions & {
-    sourcePath: string;
-    workspacePath: string;
-    timeoutMs?: number;
-    signal?: AbortSignal;
-  },
-): Promise<void> {
-  const { sourcePath, workspacePath } = args;
-  if (await pathPresent(path.join(workspacePath, ".git"))) {
-    return;
-  }
-  const gitOptions = {
-    timeoutMs: args.timeoutMs,
-    signal: args.signal,
-    ...(args.shellPath !== undefined ? { shellPath: args.shellPath } : {}),
-  };
-  // jj writes this for colocated main workspaces but not for the ones it adds;
-  // without it git reports the whole .jj directory as untracked.
-  await fs.writeFile(path.join(workspacePath, ".jj", ".gitignore"), "/*\n", "utf8");
-
-  const stagingParent = await fs.mkdtemp(path.join(os.tmpdir(), "bb-jj-git-"));
-  // git names the registration after the destination's basename; keeping the
-  // same basename here keeps `git worktree list` readable.
-  const stagingPath = path.join(stagingParent, path.basename(workspacePath));
-  try {
-    const { parent } = await readJjWorkingCopyCommits(workspacePath, gitOptions);
-    await runGit(
-      ["worktree", "add", "--detach", "--no-checkout", stagingPath, parent],
-      { cwd: sourcePath, ...gitOptions },
-    );
-    await fs.rename(
-      path.join(stagingPath, ".git"),
-      path.join(workspacePath, ".git"),
-    );
-    await runGit(["worktree", "repair"], { cwd: workspacePath, ...gitOptions });
-    // --no-checkout left the index empty; reset fills it from @- without
-    // touching the files jj checked out.
-    await runGit(["reset", "-q", parent], { cwd: workspacePath, ...gitOptions });
-  } finally {
-    await fs.rm(stagingParent, { recursive: true, force: true });
-  }
-}
-
-/**
  * Serializes jj mutations against one repository. jj takes its own lock on the
  * repo, so this only avoids pile-ups and keeps bb's own sequences (commit ->
  * bookmark set -> git export) atomic with respect to each other.
@@ -347,13 +255,4 @@ export async function withJjRepoLock<T>(
     signal,
     work,
   });
-}
-
-async function pathPresent(target: string): Promise<boolean> {
-  try {
-    await fs.lstat(target);
-    return true;
-  } catch {
-    return false;
-  }
 }
